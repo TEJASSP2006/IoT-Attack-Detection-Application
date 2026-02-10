@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Attack Detection Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-card.danger .value {
+            color: #e74c3c;
+        }
+
+        .stat-card.success .value {
+            color: #27ae60;
+        }
+
+        .main-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .panel-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .file-input {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .file-input:hover {
+            background: #e9ecef;
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .alert-danger {
+            background: #fee;
+            color: #c00;
+            border-left: 4px solid #c00;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #060;
+            border-left: 4px solid #060;
+        }
+
+        .alert-info {
+            background: #eef;
+            color: #006;
+            border-left: 4px solid #006;
+        }
+
+        .attack-type {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .attack-DDoS {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .attack-DoS {
+            background: #ee5a6f;
+            color: white;
+        }
+
+        .attack-Recon {
+            background: #feca57;
+            color: #333;
+        }
+
+        .attack-Web-based {
+            background: #ff9ff3;
+            color: #333;
+        }
+
+        .attack-Brute-Force {
+            background: #ff6348;
+            color: white;
+        }
+
+        .attack-Spoofing {
+            background: #a29bfe;
+            color: white;
+        }
+
+        .attack-Mirai {
+            background: #fd79a8;
+            color: white;
+        }
+
+        .attack-Benign {
+            background: #00b894;
+            color: white;
+        }
+
+        .probability-bar {
+            margin-bottom: 10px;
+        }
+
+        .probability-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .progress {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s;
+        }
+
+        .log-entry {
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        .log-entry.attack {
+            border-left-color: #e74c3c;
+        }
+
+        .log-entry .timestamp {
+            font-size: 0.85em;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: transparent;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ IoT Attack Detection Dashboard</h1>
+            <p>Real-time Network Security Monitoring System</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Detections</h3>
+                <div class="value" id="totalDetections">0</div>
+            </div>
+            <div class="stat-card danger">
+                <h3>Attacks Detected</h3>
+                <div class="value" id="attackCount">0</div>
+            </div>
+            <div class="stat-card success">
+                <h3>Benign Traffic</h3>
+                <div class="value" id="benignCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Detection Rate</h3>
+                <div class="value" id="detectionRate">0%</div>
+            </div>
+        </div>
+
+        <div class="main-panel">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('single')">Single Prediction</button>
+                <button class="tab" onclick="switchTab('batch')">Batch Analysis</button>
+                <button class="tab" onclick="switchTab('monitor')" id="monitorTab">Live Monitor</button>
+            </div>
+
+            <!-- Single Prediction Tab -->
+            <div id="singleTab" class="tab-content active">
+                <h2 class="panel-title">Single Traffic Analysis</h2>
+
+                <div class="input-group">
+                    <label>Network Traffic Features (JSON format)</label>
+                    <textarea id="featuresInput" rows="10" placeholder='[0.5, 1.2, 0.8, ...]'></textarea>
+                    <p style="color: #999; margin-top: 5px; font-size: 0.9em;">
+                        Note: You need to provide all required features for prediction
+                    </p>
+                </div>
+
+                <button onclick="analyzeSingleTraffic()">🔍 Analyze Traffic</button>
+                <button onclick="generateRandomFeatures()">🎲 Generate Random Sample</button>
+
+                <div id="singleResult" class="result-box"></div>
+            </div>
+
+            <!-- Batch Analysis Tab -->
+            <div id="batchTab" class="tab-content">
+                <h2 class="panel-title">Batch Traffic Analysis</h2>
+
+                <div class="file-input" onclick="document.getElementById('fileInput').click()">
+                    <p style="font-size: 1.2em; margin-bottom: 10px;">📁 Upload CSV File</p>
+                    <p style="color: #999;">Click to select a CSV file with network traffic data</p>
+                    <p id="fileName" style="margin-top: 10px; color: #667eea;"></p>
+                    <input type="file" id="fileInput" accept=".csv" style="display: none;"
+                        onchange="handleFileSelect(event)">
+                </div>
+
+                <button onclick="predictBatch()" style="margin-top: 20px;">📊 Analyze Batch</button>
+
+                <div id="batchResult" class="result-box"></div>
+            </div>
+
+            <!-- Live Monitor Tab -->
+            <div id="monitorTab" class="tab-content">
+                <h2 class="panel-title">Live Monitoring Dashboard</h2>
+
+                <div style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px;">Attack Type Distribution</h3>
+                    <div id="attackTypesList"></div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px;">Recent Detections (Last 10)</h3>
+                    <button onclick="clearLog()" style="margin-bottom: 15px;">🗑️ Clear Log</button>
+                    <div id="recentLog"></div>
+                </div>
+
+                <p style="color: #999; font-style: italic;">Auto-refreshes every 5 seconds</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+
+            // Refresh statistics if switching to monitor
+            if (tabName === 'monitor') {
+                refreshStatistics();
+            }
+        }
+
+        async function analyzeSingleTraffic() {
+            const featuresText = document.getElementById('featuresInput').value;
+
+            if (!featuresText.trim()) {
+                alert('Please enter network traffic features');
+                return;
+            }
+
+            try {
+                const features = JSON.parse(featuresText);
+
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ features })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displaySingleResult(result);
+                    refreshStatistics();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error parsing features or making prediction: ' + error.message);
+            }
+        }
+
+        function displaySingleResult(result) {
+            const resultBox = document.getElementById('singleResult');
+            const isAttack = result.attack_type !== 'Benign';
+
+            let html = `
+                <div class="alert ${isAttack ? 'alert-danger' : 'alert-success'}">
+                    <strong>${isAttack ? '⚠️ ATTACK DETECTED' : '✅ BENIGN TRAFFIC'}</strong>
+                </div>
+                
+                <h3>Detection Result:</h3>
+                <div style="margin: 20px 0;">
+                    <span class="attack-type attack-${result.attack_type.replace(/\s+/g, '-')}">${result.attack_type}</span>
+                    <p style="margin-top: 10px; font-size: 1.2em;">Confidence: <strong>${result.confidence.toFixed(2)}%</strong></p>
+                </div>
+                
+                <h4 style="margin-top: 30px; margin-bottom: 15px;">Probability Distribution:</h4>
+            `;
+
+            // Sort probabilities
+            const sortedProbs = Object.entries(result.probabilities)
+                .sort((a, b) => b[1] - a[1]);
+
+            sortedProbs.forEach(([attack, prob]) => {
+                html += `
+                    <div class="probability-bar">
+                        <div class="probability-label">
+                            <span>${attack}</span>
+                            <span><strong>${prob.toFixed(2)}%</strong></span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${prob}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultBox.innerHTML = html;
+            resultBox.classList.add('show');
+        }
+
+        async function generateRandomFeatures() {
+            try {
+                // First get the model info to know how many features are expected
+                const infoResponse = await fetch('/api/model_info');
+                const modelInfo = await infoResponse.json();
+
+                const featureCount = modelInfo.features_count || 45; // Default to 45 if not available
+
+                // Generate random features
+                const features = Array.from({ length: featureCount }, () => Math.random() * 100);
+                document.getElementById('featuresInput').value = JSON.stringify(features, null, 2);
+
+                console.log(`Generated ${featureCount} random features`);
+            } catch (error) {
+                // Fallback: generate 45 features (most common for trained models)
+                const features = Array.from({ length: 45 }, () => Math.random() * 100);
+                document.getElementById('featuresInput').value = JSON.stringify(features, null, 2);
+                console.log('Generated 45 random features (fallback)');
+            }
+        }
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            document.getElementById('fileName').textContent = `Selected: ${selectedFile.name}`;
+        }
+
+        async function predictBatch() {
+            if (!selectedFile) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/api/predict_batch', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayBatchResult(result);
+                    refreshStatistics();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        function displayBatchResult(result) {
+            const resultBox = document.getElementById('batchResult');
+
+            let html = `
+                <div class="alert alert-info">
+                    <strong>✅ Batch Analysis Complete</strong>
+                    <p>Analyzed ${result.total_predictions} network traffic samples</p>
+                </div>
+                
+                <h3>Detection Summary:</h3>
+                <div style="margin: 20px 0;">
+            `;
+
+            // Display statistics
+            for (const [attack, count] of Object.entries(result.statistics)) {
+                const percentage = ((count / result.total_predictions) * 100).toFixed(1);
+                html += `
+                    <div style="margin: 10px 0;">
+                        <span class="attack-type attack-${attack.replace(/\s+/g, '-')}">${attack}</span>
+                        <span style="margin-left: 10px;"><strong>${count}</strong> (${percentage}%)</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                </div>
+                <h4 style="margin-top: 20px;">First 10 Predictions:</h4>
+                <div style="max-height: 400px; overflow-y: auto; margin-top: 10px;">
+            `;
+
+            // Display first 10 predictions
+            result.predictions.slice(0, 10).forEach(pred => {
+                html += `
+                    <div class="log-entry">
+                        <span class="attack-type attack-${pred.attack_type.replace(/\s+/g, '-')}">${pred.attack_type}</span>
+                        <span style="margin-left: 10px;">Confidence: ${pred.confidence.toFixed(2)}%</span>
+                        <span style="float: right; color: #999;">Sample #${pred.index}</span>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultBox.innerHTML = html;
+            resultBox.classList.add('show');
+        }
+
+        async function refreshStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                const stats = await response.json();
+
+                document.getElementById('totalDetections').textContent = stats.total_detections;
+                document.getElementById('attackCount').textContent = stats.attack_count;
+                document.getElementById('benignCount').textContent = stats.benign_count;
+
+                const rate = stats.total_detections > 0
+                    ? ((stats.attack_count / stats.total_detections) * 100).toFixed(1)
+                    : 0;
+                document.getElementById('detectionRate').textContent = rate + '%';
+
+                // Update attack types chart
+                updateAttackTypesChart(stats.attack_types);
+
+                // Update recent log
+                updateRecentLog(stats.recent_detections);
+            } catch (error) {
+                console.error('Error fetching statistics:', error);
+            }
+        }
+
+        function updateAttackTypesChart(attackTypes) {
+            const container = document.getElementById('attackTypesList');
+
+            if (Object.keys(attackTypes).length === 0) {
+                container.innerHTML = '<p style="color: #999;">No detections yet</p>';
+                return;
+            }
+
+            let html = '';
+            const total = Object.values(attackTypes).reduce((a, b) => a + b, 0);
+
+            for (const [attack, count] of Object.entries(attackTypes)) {
+                const percentage = ((count / total) * 100).toFixed(1);
+                html += `
+                    <div class="probability-bar">
+                        <div class="probability-label">
+                            <span class="attack-type attack-${attack.replace(/\s+/g, '-')}">${attack}</span>
+                            <span><strong>${count}</strong> (${percentage}%)</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function updateRecentLog(detections) {
+            const container = document.getElementById('recentLog');
+
+            if (!detections || detections.length === 0) {
+                container.innerHTML = '<p style="color: #999;">No recent detections</p>';
+                return;
+            }
+
+            let html = '';
+            detections.forEach(detection => {
+                const date = new Date(detection.timestamp);
+                html += `
+                    <div class="log-entry ${detection.is_attack ? 'attack' : ''}">
+                        <span class="attack-type attack-${detection.attack_type.replace(/\s+/g, '-')}">${detection.attack_type}</span>
+                        <span style="margin-left: 10px;">Confidence: ${detection.confidence.toFixed(2)}%</span>
+                        <div class="timestamp">${date.toLocaleString()}</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function clearLog() {
+            if (confirm('Clear all detection logs?')) {
+                try {
+                    await fetch('/api/clear_log');
+                    refreshStatistics();
+                } catch (error) {
+                    console.error('Error clearing log:', error);
+                }
+            }
+        }
+
+        // Auto-refresh statistics every 5 seconds when on monitor tab
+        setInterval(() => {
+            if (document.getElementById('monitorTab').classList.contains('active')) {
+                refreshStatistics();
+            }
+        }, 5000);
+
+        // Initial statistics load
+        refreshStatistics();
+    </script>
+</body>
+
+</html>
