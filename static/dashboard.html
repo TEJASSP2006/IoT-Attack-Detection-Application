@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IoT Attack Detection Dashboard</title>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --green: #16a34a;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .header-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .header-card .brand { display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0; }
+    .header-card svg { flex-shrink: 0; }
+    .header-card h1 { margin: 0; font-size: 1.5rem; font-weight: 700; }
+    .header-card p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.95rem; }
+    .hamburger {
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 10px;
+      width: 46px;
+      height: 46px;
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: var(--text);
+    }
+    .hamburger:hover { background: var(--bg); }
+    .drawer-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      z-index: 200;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 300px;
+      max-width: 92vw;
+      height: 100vh;
+      background: var(--card);
+      box-shadow: 4px 0 24px rgba(0,0,0,.15);
+      z-index: 201;
+      transform: translateX(-100%);
+      transition: transform 0.28s ease;
+      padding: 1.25rem 1.35rem;
+      overflow-y: auto;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer h2 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+    .drawer p { margin: 0 0 1rem; font-size: 0.82rem; color: var(--muted); line-height: 1.45; }
+    .drawer label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; }
+    .drawer input[type="password"] { width: 100%; margin-bottom: 0.75rem; }
+    .drawer .btn { width: 100%; margin-top: 0.35rem; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .metric {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      text-align: center;
+    }
+    .metric label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .metric .val { font-size: 1.75rem; font-weight: 700; }
+    .metric .val.blue { color: var(--blue); }
+    .metric .val.red { color: var(--red); }
+    .metric .val.green { color: var(--green); }
+    .panel {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 0.5rem;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .tabs button {
+      background: none;
+      border: none;
+      padding: 1rem 1.25rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tabs button:hover { color: var(--text); }
+    .tabs button.active {
+      color: var(--blue);
+      border-bottom-color: var(--blue);
+    }
+    .tab-body { padding: 1.25rem 1.5rem; min-height: 280px; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    textarea, input[type="password"], input[type="file"] {
+      font-family: ui-monospace, monospace;
+      font-size: 0.85rem;
+    }
+    textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      min-height: 120px;
+    }
+    input[type="password"] {
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .batch-section {
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px dashed var(--border);
+    }
+    .batch-section:last-of-type { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+    .batch-section h4 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--text); }
+    .batch-section p.hint { margin: 0 0 0.65rem; font-size: 0.82rem; color: var(--muted); }
+    .btn {
+      margin-top: 0.65rem;
+      margin-right: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      border: 0;
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn-secondary { background: var(--muted); }
+    .table-wrap { margin-top: 1rem; overflow-x: auto; max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    table.data th, table.data td {
+      text-align: left;
+      padding: 0.5rem 0.65rem;
+      border-bottom: 1px solid var(--border);
+    }
+    table.data th { color: var(--muted); font-weight: 600; background: #f8fafc; position: sticky; top: 0; }
+    table.data tr:last-child td { border-bottom: 0; }
+    .pill { padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .pill.attack { background: #fee2e2; color: var(--red); }
+    .pill.ok { background: #dcfce7; color: var(--green); }
+    .live-hint { color: var(--muted); font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .mono { font-family: ui-monospace, monospace; font-size: 0.75rem; }
+    .note { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+    .badge-error {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      background: var(--red);
+      color: #fff;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: none;
+      z-index: 100;
+    }
+    .badge-error.show { display: block; }
+  </style>
+</head>
+<body>
+  <div id="errBadge" class="badge-error">error</div>
+
+  <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
+  <aside id="drawer" class="drawer" aria-label="Settings menu">
+    <h2>Settings</h2>
+    <p>If your server uses <code>API_KEY</code> in <code>.env</code>, enter it here. It is kept in this browser session only.</p>
+    <label for="apiKey">API key (<code>x-api-key</code>)</label>
+    <input type="password" id="apiKey" placeholder="Paste API key" autocomplete="off" />
+    <button type="button" class="btn" id="saveKey">Save key</button>
+    <button type="button" class="btn btn-secondary" id="closeDrawer">Close menu</button>
+  </aside>
+
+  <div class="wrap">
+    <div class="header-card">
+      <div class="brand">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+          <path d="M9 12l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <h1>IoT Attack Detection Dashboard</h1>
+          <p>Real-time Network Security Monitoring System</p>
+        </div>
+      </div>
+      <button type="button" class="hamburger" id="btnMenu" aria-label="Open menu" title="Menu">☰</button>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <label>TOTAL DETECTIONS</label>
+        <span class="val blue" id="mTotal">0</span>
+      </div>
+      <div class="metric">
+        <label>ATTACKS DETECTED</label>
+        <span class="val red" id="mAttacks">0</span>
+      </div>
+      <div class="metric">
+        <label>BENIGN TRAFFIC</label>
+        <span class="val green" id="mBenign">0</span>
+      </div>
+      <div class="metric">
+        <label>DETECTION RATE</label>
+        <span class="val blue" id="mRate">0%</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="tabs">
+        <button type="button" class="active" data-tab="single">Single Prediction</button>
+        <button type="button" data-tab="batch">Batch Analysis</button>
+        <button type="button" data-tab="live">Live Monitor</button>
+      </div>
+      <div class="tab-body">
+        <div id="pane-single" class="tab-pane active">
+          <p style="color:var(--muted);font-size:0.9rem;margin-top:0">Send one JSON feature object (keys must match training columns).</p>
+          <textarea id="payloadSingle">{ "flow_duration": 120, "pkt_len_mean": 64.7 }</textarea>
+          <button type="button" class="btn" id="btnSingle">Run prediction</button>
+          <div id="singleTableHost"></div>
+        </div>
+
+        <div id="pane-batch" class="tab-pane">
+          <div class="batch-section">
+            <h4>Option A — JSON array</h4>
+            <p class="hint">Up to 100 records per request.</p>
+            <textarea id="payloadBatch">[
+  { "flow_duration": 100, "pkt_len_mean": 70 },
+  { "flow_duration": 200, "pkt_len_mean": 90 }
+]</textarea>
+            <button type="button" class="btn" id="btnBatch">Analyze JSON</button>
+          </div>
+          <div class="batch-section">
+            <h4>Option B — CSV file</h4>
+            <p class="hint">Upload a CSV with the same feature columns as training. Label columns (<code>label</code>, <code>Attack_label</code>, etc.) are ignored. Max 500 rows processed per upload.</p>
+            <input type="file" id="csvFile" accept=".csv" />
+            <br />
+            <button type="button" class="btn" id="btnCsv">Analyze CSV</button>
+          </div>
+          <div id="batchTableHost"></div>
+        </div>
+
+        <div id="pane-live" class="tab-pane">
+          <p class="live-hint">Auto-refreshes every 2s from stored predictions. Make predictions in other tabs to see rows here.</p>
+          <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;">
+            <label style="font-size:0.85rem;color:var(--muted)"><input type="checkbox" id="liveAuto" checked /> Auto-refresh</label>
+            <button type="button" class="btn btn-secondary" id="btnRefreshLive">Refresh now</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Prediction</th>
+                  <th>Type</th>
+                  <th>Score</th>
+                  <th>Sample record</th>
+                </tr>
+              </thead>
+              <tbody id="liveBody">
+                <tr><td colspan="5" style="color:var(--muted)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const errBadge = document.getElementById("errBadge");
+    let liveTimer = null;
+
+    const drawer = document.getElementById("drawer");
+    const drawerOverlay = document.getElementById("drawerOverlay");
+
+    function openDrawer() {
+      drawer.classList.add("open");
+      drawerOverlay.classList.add("open");
+      drawerOverlay.setAttribute("aria-hidden", "false");
+    }
+    function closeDrawer() {
+      drawer.classList.remove("open");
+      drawerOverlay.classList.remove("open");
+      drawerOverlay.setAttribute("aria-hidden", "true");
+    }
+    document.getElementById("btnMenu").addEventListener("click", openDrawer);
+    document.getElementById("closeDrawer").addEventListener("click", closeDrawer);
+    drawerOverlay.addEventListener("click", closeDrawer);
+
+    function loadKey() {
+      document.getElementById("apiKey").value = sessionStorage.getItem("iotApiKey") || "";
+    }
+    function saveKey() {
+      sessionStorage.setItem("iotApiKey", document.getElementById("apiKey").value.trim());
+      closeDrawer();
+    }
+    document.getElementById("saveKey").addEventListener("click", saveKey);
+
+    function headersJson() {
+      const h = { "Content-Type": "application/json" };
+      const k = sessionStorage.getItem("iotApiKey");
+      if (k) h["x-api-key"] = k;
+      return h;
+    }
+    function headersMultipart() {
+      const h = {};
+      const k = sessionStorage.getItem("iotApiKey");
+      if (k) h["x-api-key"] = k;
+      return h;
+    }
+
+    function showError(on) {
+      errBadge.classList.toggle("show", !!on);
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");
+    }
+
+    function typePill(isAttack) {
+      return "<span class=\"pill " + (isAttack ? "attack" : "ok") + "\">" + (isAttack ? "ATTACK" : "BENIGN") + "</span>";
+    }
+
+    function renderSingleResult(host, j) {
+      host.innerHTML = "";
+      if (j.detail !== undefined) {
+        const msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+        host.innerHTML = "<div class=\"table-wrap\"><table class=\"data\"><thead><tr><th>Error</th></tr></thead><tbody><tr><td>" + escapeHtml(msg) + "</td></tr></tbody></table></div>";
+        return;
+      }
+      let html = "<h4 style=\"margin:1rem 0 0.5rem;font-size:0.9rem\">Prediction summary</h4><div class=\"table-wrap\"><table class=\"data\"><thead><tr><th>Metric</th><th>Value</th></tr></thead><tbody>";
+      html += "<tr><td>Prediction (class)</td><td>" + escapeHtml(String(j.prediction != null ? j.prediction : "—")) + "</td></tr>";
+      html += "<tr><td>Type</td><td>" + typePill(!!j.is_attack) + "</td></tr>";
+      html += "<tr><td>Attack score</td><td>" + (j.attack_score != null ? Number(j.attack_score).toFixed(4) : "—") + "</td></tr>";
+      html += "<tr><td>Threshold</td><td>" + (j.attack_threshold != null ? Number(j.attack_threshold).toFixed(4) : "—") + "</td></tr>";
+      html += "</tbody></table></div>";
+      if (j.probabilities && typeof j.probabilities === "object") {
+        const entries = Object.keys(j.probabilities).map(function (k) {
+          return [k, j.probabilities[k]];
+        }).sort(function (a, b) { return b[1] - a[1]; });
+        html += "<h4 style=\"margin:1rem 0 0.5rem;font-size:0.9rem\">Class probabilities</h4><div class=\"table-wrap\" style=\"max-height:220px\"><table class=\"data\"><thead><tr><th>Class</th><th>Probability</th></tr></thead><tbody>";
+        entries.forEach(function (row) {
+          html += "<tr><td class=\"mono\">" + escapeHtml(row[0]) + "</td><td>" + Number(row[1]).toFixed(4) + "</td></tr>";
+        });
+        html += "</tbody></table></div>";
+      }
+      host.innerHTML = html;
+    }
+
+    function renderBatchResult(host, j) {
+      host.innerHTML = "";
+      if (j.detail !== undefined) {
+        const msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+        host.innerHTML = "<div class=\"table-wrap\"><table class=\"data\"><thead><tr><th>Error</th></tr></thead><tbody><tr><td>" + escapeHtml(msg) + "</td></tr></tbody></table></div>";
+        return;
+      }
+      let note = "";
+      if (j.dropped_label_columns && j.dropped_label_columns.length) {
+        note += "<p class=\"note\">Ignored label column(s): <span class=\"mono\">" + escapeHtml(j.dropped_label_columns.join(", ")) + "</span></p>";
+      }
+      if (j.truncated_to_max_rows) {
+        note += "<p class=\"note\">CSV truncated to first " + escapeHtml(String(j.max_rows)) + " rows.</p>";
+      }
+      const results = j.results || [];
+      if (!results.length) {
+        host.innerHTML = note + "<p class=\"note\">No results.</p>";
+        return;
+      }
+      let html = note + "<div class=\"table-wrap\"><table class=\"data\"><thead><tr><th>Row</th><th>Prediction</th><th>Type</th><th>Attack score</th><th>Threshold</th></tr></thead><tbody>";
+      results.forEach(function (r) {
+        const ri = r.row !== undefined ? r.row : "—";
+        html += "<tr><td>" + escapeHtml(String(ri)) + "</td><td>" + escapeHtml(String(r.prediction != null ? r.prediction : "—")) + "</td><td>" + typePill(!!r.is_attack) + "</td><td>" + (r.attack_score != null ? Number(r.attack_score).toFixed(4) : "—") + "</td><td>" + (r.attack_threshold != null ? Number(r.attack_threshold).toFixed(4) : "—") + "</td></tr>";
+      });
+      html += "</tbody></table></div>";
+      host.innerHTML = html;
+    }
+
+    async function refreshMetrics() {
+      try {
+        const r = await fetch("/stats", { headers: headersJson() });
+        if (!r.ok) throw new Error(await r.text());
+        const s = await r.json();
+        document.getElementById("mTotal").textContent = s.total;
+        document.getElementById("mAttacks").textContent = s.attacks;
+        document.getElementById("mBenign").textContent = s.benign;
+        document.getElementById("mRate").textContent = s.detection_rate_percent + "%";
+        showError(false);
+      } catch (e) {
+        showError(true);
+        console.error(e);
+      }
+    }
+
+    async function refreshLiveTable() {
+      const tbody = document.getElementById("liveBody");
+      try {
+        const r = await fetch("/predictions?limit=50", { headers: headersJson() });
+        if (!r.ok) throw new Error(await r.text());
+        const data = await r.json();
+        const items = data.items || [];
+        if (!items.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="color:var(--muted)">No predictions yet. Run Single or Batch above.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = items.map(function (row) {
+          const attack = !!row.is_attack;
+          const rec = row.record_json;
+          let short = rec;
+          try { short = JSON.stringify(JSON.parse(rec)); } catch (_) {}
+          if (short.length > 80) short = short.slice(0, 77) + "…";
+          return "<tr><td class=\"mono\">" + escapeHtml(String(row.created_at || "")) +
+            "</td><td>" + escapeHtml(String(row.prediction)) +
+            "</td><td>" + typePill(attack) +
+            "</td><td>" + (row.score != null ? Number(row.score).toFixed(3) : "—") +
+            "</td><td class=\"mono\" title=\"" + escapeHtml(rec) + "\">" + escapeHtml(short) + "</td></tr>";
+        }).join("");
+        showError(false);
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--red)">Failed to load (open ☰ menu and set API key if required).</td></tr>';
+        showError(true);
+        console.error(e);
+      }
+    }
+
+    document.querySelectorAll(".tabs button").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        document.querySelectorAll(".tabs button").forEach(function (b) { b.classList.remove("active"); });
+        document.querySelectorAll(".tab-pane").forEach(function (p) { p.classList.remove("active"); });
+        btn.classList.add("active");
+        document.getElementById("pane-" + btn.dataset.tab).classList.add("active");
+        if (btn.dataset.tab === "live") {
+          refreshLiveTable();
+          startLivePoll();
+        } else {
+          stopLivePoll();
+        }
+      });
+    });
+
+    function startLivePoll() {
+      stopLivePoll();
+      if (!document.getElementById("liveAuto").checked) return;
+      liveTimer = setInterval(function () {
+        if (document.getElementById("pane-live").classList.contains("active")) {
+          refreshLiveTable();
+          refreshMetrics();
+        }
+      }, 2000);
+    }
+    function stopLivePoll() {
+      if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+    }
+    document.getElementById("liveAuto").addEventListener("change", function () {
+      if (document.getElementById("pane-live").classList.contains("active")) startLivePoll();
+    });
+    document.getElementById("btnRefreshLive").addEventListener("click", function () {
+      refreshLiveTable();
+      refreshMetrics();
+    });
+
+    document.getElementById("btnSingle").addEventListener("click", async function () {
+      const host = document.getElementById("singleTableHost");
+      try {
+        const record = JSON.parse(document.getElementById("payloadSingle").value);
+        const r = await fetch("/predict", {
+          method: "POST",
+          headers: headersJson(),
+          body: JSON.stringify({ record })
+        });
+        const text = await r.text();
+        let j;
+        try { j = JSON.parse(text); } catch (_) { j = { detail: text }; }
+        renderSingleResult(host, j);
+        if (!r.ok) showError(true); else { showError(false); refreshMetrics(); }
+      } catch (e) {
+        renderSingleResult(host, { detail: String(e) });
+        showError(true);
+      }
+    });
+
+    document.getElementById("btnBatch").addEventListener("click", async function () {
+      const host = document.getElementById("batchTableHost");
+      try {
+        const records = JSON.parse(document.getElementById("payloadBatch").value);
+        if (!Array.isArray(records)) throw new Error("Root must be a JSON array");
+        const r = await fetch("/predict/batch", {
+          method: "POST",
+          headers: headersJson(),
+          body: JSON.stringify({ records })
+        });
+        const text = await r.text();
+        let j;
+        try { j = JSON.parse(text); } catch (_) { j = { detail: text }; }
+        renderBatchResult(host, j);
+        if (!r.ok) showError(true); else { showError(false); refreshMetrics(); }
+      } catch (e) {
+        renderBatchResult(host, { detail: String(e) });
+        showError(true);
+      }
+    });
+
+    document.getElementById("btnCsv").addEventListener("click", async function () {
+      const host = document.getElementById("batchTableHost");
+      const input = document.getElementById("csvFile");
+      if (!input.files || !input.files[0]) {
+        renderBatchResult(host, { detail: "Choose a CSV file first." });
+        showError(true);
+        return;
+      }
+      const fd = new FormData();
+      fd.append("file", input.files[0]);
+      try {
+        const r = await fetch("/predict/batch_csv", {
+          method: "POST",
+          headers: headersMultipart(),
+          body: fd
+        });
+        const text = await r.text();
+        let j;
+        try { j = JSON.parse(text); } catch (_) { j = { detail: text }; }
+        renderBatchResult(host, j);
+        if (!r.ok) showError(true); else { showError(false); refreshMetrics(); }
+      } catch (e) {
+        renderBatchResult(host, { detail: String(e) });
+        showError(true);
+      }
+    });
+
+    loadKey();
+    refreshMetrics();
+    setInterval(refreshMetrics, 5000);
+  </script>
+</body>
+</html>
